@@ -1,6 +1,6 @@
 node_modules
 .env
 .DS_Store
-.CODE_EXPLANATION.md
-.DEFENSE_GUIDE.md
-.docs
+CODE_EXPLANATION.md
+DEFENSE_GUIDE.md
+docs/
