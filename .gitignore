@@ -3,3 +3,4 @@ node_modules
 .DS_Store
 .CODE_EXPLANATION.md
 .DEFENSE_GUIDE.md
+.docs
