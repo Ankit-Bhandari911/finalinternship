@@ -57,8 +57,16 @@ const userSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now(),
+    default: Date.now,
     immutable: true,
+  },
+});
+
+// Never send the password hash to API clients.
+userSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    delete ret.password;
+    return ret;
   },
 });
 

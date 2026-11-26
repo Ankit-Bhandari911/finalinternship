@@ -29,6 +29,7 @@ const paymentSchema = new mongoose.Schema({
     default: Date.now,
   },
   transactionId: String,
+  pidx: String,
 });
 
 const model = mongoose.model("Payment", paymentSchema);

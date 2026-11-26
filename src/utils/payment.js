@@ -1,6 +1,5 @@
 import axios from "axios";
 import config from "../config/config.js";
-import Stripe from "stripe";
 
 const payViaKhalti = async (data) => {
   if (!data) throw { message: "Payment data is required." };
@@ -15,7 +14,8 @@ const payViaKhalti = async (data) => {
 
   const body = {
     return_url: `${config.appUrl}/orders/${data.purchaseOrderId}/payment/khalti`,
-    amount: data.amount,
+    // Khalti expects the amount in paisa (1 NPR = 100 paisa).
+    amount: Math.round(data.amount * 100),
     website_url: config.appUrl,
     purchase_order_id: data.purchaseOrderId,
     purchase_order_name: data.purchaseOrderName,
@@ -39,20 +39,18 @@ const payViaKhalti = async (data) => {
   return response.data;
 };
 
-async function payViaStripe(data) {
-  const stripe = new Stripe(config.stripe.secretKey);
+const lookupKhalti = async (pidx) => {
+  const response = await axios.post(
+    `${config.khalti.apiUrl}/epayment/lookup/`,
+    { pidx },
+    {
+      headers: {
+        Authorization: `Key ${config.khalti.apiKey}`,
+      },
+    }
+  );
 
-  return await stripe.paymentIntents.create({
-    amount: data.amount,
-    currency: data.currency || "npr",
-    metadata: {
-      customer_email: data.customer.email,
-      customer_name: data.customer.name,
-      customer_phone: data.customer.phone,
-      order_id: data.orderId,
-      order_name: data.orderName,
-    },
-  });
-}
+  return response.data;
+};
 
-export default { payViaKhalti, payViaStripe };
+export default { lookupKhalti, payViaKhalti };

@@ -8,6 +8,76 @@
   --paper: #f7f7f3;
   --line: #e7e8e1;
   --fern: #315c45;
+
+  --c-ink: 29 33 30;
+  --c-paper: 247 247 243;
+  --c-card: 255 255 255;
+  --c-soft: 240 241 236;
+  --c-line: 231 232 225;
+  --c-line2: 215 218 207;
+  --c-brand: 49 92 69;
+  --c-muted: 114 119 111;
+  --c-danger: 154 79 69;
+
+  --light-primary: 24 49 36;
+  --light-on-primary: 255 255 255;
+  --light-primary-container: 46 71 57;
+  --light-error: 186 26 26;
+  --light-error-container: 255 218 214;
+  --light-surface: 250 249 246;
+  --light-surface-container-lowest: 255 255 255;
+  --light-surface-container-low: 244 243 241;
+  --light-surface-container: 239 238 235;
+  --light-surface-container-high: 233 232 229;
+  --light-on-surface: 26 28 27;
+  --light-on-surface-variant: 66 72 68;
+  --light-outline: 114 121 115;
+  --light-outline-variant: 194 200 194;
+  --success: 31 110 67;
+  --success-container: 216 243 226;
+  --on-success-container: 11 59 33;
+  --warning: 138 90 0;
+  --warning-container: 254 240 209;
+  --on-warning-container: 74 46 0;
+}
+
+.dark {
+  color-scheme: dark;
+  --ink: #eceee8;
+  --paper: #121513;
+  --line: #2e3430;
+  --fern: #7db896;
+
+  --c-ink: 236 238 232;
+  --c-paper: 18 21 19;
+  --c-card: 27 31 29;
+  --c-soft: 36 41 38;
+  --c-line: 46 52 48;
+  --c-line2: 62 70 65;
+  --c-brand: 125 184 150;
+  --c-muted: 150 157 148;
+  --c-danger: 224 140 128;
+
+  --light-primary: 168 214 188;
+  --light-on-primary: 16 32 24;
+  --light-primary-container: 196 230 210;
+  --light-error: 255 180 171;
+  --light-error-container: 147 0 10;
+  --light-surface: 18 21 19;
+  --light-surface-container-lowest: 27 31 29;
+  --light-surface-container-low: 31 36 33;
+  --light-surface-container: 38 43 40;
+  --light-surface-container-high: 48 54 50;
+  --light-on-surface: 232 234 229;
+  --light-on-surface-variant: 184 191 184;
+  --light-outline: 140 148 141;
+  --light-outline-variant: 60 67 62;
+  --success: 130 210 165;
+  --success-container: 18 60 38;
+  --on-success-container: 200 240 215;
+  --warning: 240 190 100;
+  --warning-container: 66 46 8;
+  --on-warning-container: 252 226 170;
 }
 
 * {
@@ -22,6 +92,7 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
+  transition: background-color 150ms ease, color 150ms ease;
   font-family: Arial, Helvetica, sans-serif;
 }
 

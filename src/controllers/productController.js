@@ -1,9 +1,13 @@
 import productService from "../services/productService.js";
 
 const getProducts = async (req, res) => {
-  const products = await productService.getProducts(req.query);
+  try {
+    const products = await productService.getProducts(req.query);
 
-  res.status(200).json(products);
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(error.statusCode || 500).send(error.message);
+  }
 };
 
 const getBrands = async (req, res) => {
@@ -46,7 +50,10 @@ const createProduct = async (req, res) => {
 
     res.status(201).json(data);
   } catch (error) {
-    res.status(error.statusCode || 500).send(error.message);
+    const statusCode =
+      error.statusCode || (error.name === "ValidationError" ? 400 : 500);
+
+    res.status(statusCode).send(error.message);
   }
 };
 
@@ -63,7 +70,10 @@ const updateProduct = async (req, res) => {
 
     res.status(201).json(data);
   } catch (error) {
-    res.status(error.statusCode || 500).send(error.message);
+    const statusCode =
+      error.statusCode || (error.name === "ValidationError" ? 400 : 500);
+
+    res.status(statusCode).send(error.message);
   }
 };
 

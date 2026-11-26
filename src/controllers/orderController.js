@@ -40,9 +40,12 @@ const createOrder = async (req, res) => {
   try {
     const data = await orderService.createOrder(req.body, req.user);
 
-    res.json(data);
+    res.status(201).json(data);
   } catch (error) {
-    res.status(error.statusCode || 500).send(error.message);
+    const statusCode =
+      error.statusCode || (error.name === "ValidationError" ? 400 : 500);
+
+    res.status(statusCode).send(error.message);
   }
 };
 
@@ -82,25 +85,13 @@ const orderPaymentViaKhalti = async (req, res) => {
   }
 };
 
-const orderPaymentViaStripe = async (req, res) => {
-  const id = req.params.id;
-
-  try {
-    const data = await orderService.orderPaymentViaStripe(id, req.user);
-
-    res.json(data);
-  } catch (error) {
-    res.status(error.statusCode || 500).send(error.message);
-  }
-};
-
 const confirmOrderPayment = async (req, res) => {
   const id = req.params.id;
 
   try {
     const data = await orderService.confirmOrderPayment(
       id,
-      req.body.status,
+      req.body,
       req.user
     );
 
@@ -120,15 +111,25 @@ const getOrdersOfMerchant = async (req, res) => {
   }
 };
 
+const getMerchantSalesSummary = async (req, res) => {
+  try {
+    const data = await orderService.getMerchantSalesSummary(req.user._id);
+
+    res.json(data);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+};
+
 export default {
   confirmOrderPayment,
   createOrder,
   deleteOrder,
+  getMerchantSalesSummary,
   getOrderById,
   getOrders,
   getOrdersByUser,
   getOrdersOfMerchant,
   orderPaymentViaKhalti,
-  orderPaymentViaStripe,
   updateOrder,
 };

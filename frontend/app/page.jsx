@@ -18,6 +18,8 @@ import {
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PasswordInput from "./components/PasswordInput";
+import ThemeToggle from "./components/ThemeToggle";
 import {
   CATEGORY_GROUPS,
   apiRequest,
@@ -43,6 +45,8 @@ const SAMPLE_PRODUCTS = [
   { _id: "sample-treat3", name: "Apple Gummy Jar", brand: "Kaski Sweets", category: "Little treats", price: 480, stock: 30, imageUrls: ["/products/treat3.jpg"], description: "A glass jar of tangy green apple gummies, good for sharing." },
   { _id: "sample-treat4", name: "Pink Meringue Kisses", brand: "Patan Bakehouse", category: "Little treats", price: 650, stock: 20, imageUrls: ["/products/treat4.jpg"], description: "Light, crisp meringues with a soft strawberry swirl." },
 ];
+
+const PAGE_SIZE = 12;
 
 const primaryButton =
   "inline-flex items-center justify-center gap-gutter-sm rounded bg-light-primary text-light-on-primary font-label text-label-lg transition-colors duration-state-change hover:bg-light-primary-container disabled:opacity-60";
@@ -89,6 +93,9 @@ export default function Home() {
   const [authMode, setAuthMode] = useState("login");
   const [orders, setOrders] = useState([]);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [savedEmail, setSavedEmail] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const loadMoreRef = useRef(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [checkout, setCheckout] = useState({ city: "", province: "", street: "", country: "Nepal" });
   const accountRef = useRef(null);
@@ -99,11 +106,14 @@ export default function Home() {
       const savedUser = window.localStorage.getItem("cg-user");
       const savedToken = window.localStorage.getItem("cg-token");
       const savedCart = window.localStorage.getItem("cg-cart");
+      setSavedEmail(window.localStorage.getItem("cg-last-email") || "");
       if (savedUser && savedToken) {
         setUser(JSON.parse(savedUser));
         setToken(savedToken);
+        if (savedCart) setCart(JSON.parse(savedCart));
+      } else {
+        window.localStorage.removeItem("cg-cart");
       }
-      if (savedCart) setCart(JSON.parse(savedCart));
     } catch {
       window.localStorage.removeItem("cg-user");
       window.localStorage.removeItem("cg-token");
@@ -157,6 +167,26 @@ export default function Home() {
     return result;
   }, [products, activeCategory, search, sort]);
 
+  const visibleProducts = useMemo(() => filteredProducts.slice(0, visibleCount), [filteredProducts, visibleCount]);
+  const hasMoreProducts = visibleCount < filteredProducts.length;
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeCategory, search, sort]);
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasMoreProducts) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) setVisibleCount((count) => count + PAGE_SIZE);
+      },
+      { rootMargin: "300px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMoreProducts, visibleCount]);
+
   const categories = useMemo(() => {
     const names = new Map();
     products.forEach((product) => {
@@ -185,6 +215,12 @@ export default function Home() {
   };
 
   const addToCart = (product) => {
+    if (!user || !token) {
+      setSelectedProduct(null);
+      openAuth("login");
+      showNotice("Sign in to add items to your bag.", 3000);
+      return;
+    }
     setCart((current) => {
       const found = current.find((item) => item._id === product._id);
       return found
@@ -219,7 +255,7 @@ export default function Home() {
       const result = await apiRequest("/orders/user", { token });
       setOrders(Array.isArray(result) ? result : []);
     } catch (error) {
-      setApiError(error.message);
+      handleRequestError(error);
     }
   };
 
@@ -278,6 +314,10 @@ export default function Home() {
       setToken(authToken);
       window.localStorage.setItem("cg-user", JSON.stringify(profile));
       window.localStorage.setItem("cg-token", authToken);
+      if (values.email) {
+        window.localStorage.setItem("cg-last-email", values.email);
+        setSavedEmail(values.email);
+      }
       setPanel(null);
       setApiError("");
       showNotice(`Welcome${profile.name ? `, ${profile.name.split(" ")[0]}` : ""}.`, 3000);
@@ -286,6 +326,25 @@ export default function Home() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // The API rejects expired or invalid tokens. Clear the local session so the
+  // user can sign in again instead of staying stuck in a broken signed-in state.
+  const handleRequestError = (error) => {
+    if (/auth token|not authenticated/i.test(error.message)) {
+      setUser(null);
+      setToken("");
+      setCart([]);
+      setOrders([]);
+      window.localStorage.removeItem("cg-user");
+      window.localStorage.removeItem("cg-token");
+      window.localStorage.removeItem("cg-cart");
+      setPanel("auth");
+      setAuthMode("login");
+      setApiError("Your session expired. Please sign in again.");
+      return;
+    }
+    setApiError(error.message);
   };
 
   const logout = async () => {
@@ -298,6 +357,9 @@ export default function Home() {
     setToken("");
     window.localStorage.removeItem("cg-user");
     window.localStorage.removeItem("cg-token");
+    window.localStorage.removeItem("cg-cart");
+    setCart([]);
+    setOrders([]);
     setAccountOpen(false);
     setPanel(null);
   };
@@ -331,7 +393,7 @@ export default function Home() {
       setCart([]);
       window.location.assign(payment.payment_url);
     } catch (error) {
-      setApiError(error.message);
+      handleRequestError(error);
     } finally {
       setBusy(false);
     }
@@ -382,12 +444,13 @@ export default function Home() {
               <a href="#catalog" onClick={() => setActiveCategory("all")} className="font-label text-label-lg text-light-on-surface transition-colors duration-state-change hover:text-light-primary">Shop all</a>
               <a href="#collections" className={navLink}>Collections</a>
               <button type="button" onClick={showOrders} className={navLink}>Your orders</button>
-              <a href="/dashboard" className={navLink}>Dashboard</a>
             </nav>
           </div>
 
           <div className="flex max-w-md flex-1 items-center justify-end gap-gutter-sm">
             {searchBox("hidden w-full max-w-xs sm:flex")}
+
+            <ThemeToggle className={roundIconButton} />
 
             <div ref={accountRef} className="relative">
               <button type="button" aria-label={user ? "Account menu" : "Sign in"} aria-expanded={accountOpen} onClick={() => user ? setAccountOpen(!accountOpen) : openAuth("login")} className={`${roundIconButton} overflow-hidden`}>
@@ -436,7 +499,6 @@ export default function Home() {
             <a href="#catalog" onClick={() => { setActiveCategory("all"); setMobileMenu(false); }} className="font-label text-label-lg">Shop all</a>
             <a href="#collections" onClick={() => setMobileMenu(false)} className="font-label text-label-lg">Collections</a>
             <button type="button" onClick={showOrders} className="text-left font-label text-label-lg">Your orders</button>
-            <a href="/dashboard" className="font-label text-label-lg">Dashboard</a>
           </div>
         )}
       </header>
@@ -550,11 +612,19 @@ export default function Home() {
           </div>
 
           {filteredProducts.length > 0 ? (
+            <>
             <div className="grid grid-cols-1 items-stretch gap-gutter-lg sm:grid-cols-2 lg:grid-cols-4">
-              {filteredProducts.map((product) => (
+              {visibleProducts.map((product) => (
                 <ProductCard key={product._id} product={product} onAdd={addToCart} onOpen={setSelectedProduct} />
               ))}
             </div>
+            <div ref={loadMoreRef} className="mt-gutter-xl flex flex-col items-center gap-2">
+              <p className="font-body text-body-md text-light-on-surface-variant">Showing {visibleProducts.length} of {filteredProducts.length}</p>
+              {hasMoreProducts && (
+                <button type="button" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="rounded border border-light-outline-variant bg-light-surface-container-lowest px-5 py-2.5 font-label text-label-md text-light-on-surface transition-colors duration-state-change hover:border-light-primary">Load more</button>
+              )}
+            </div>
+            </>
           ) : (
             <div className="rounded-md border border-dashed border-light-outline-variant bg-light-surface-container-low py-section text-center">
               <p className="mb-1 font-title text-title-md text-light-on-surface">No products match your search</p>
@@ -734,7 +804,7 @@ export default function Home() {
                       <Field label="Street address" name="street" autoComplete="street-address" />
                     </>
                   )}
-                  <Field label="Email address" name="email" type="email" autoComplete="email" required />
+                  <Field key={`email-${authMode}-${savedEmail}`} label="Email address" name="email" type="email" autoComplete="username" defaultValue={authMode === "login" || authMode === "forgot" ? savedEmail : ""} required />
                   {authMode !== "forgot" && <Field label="Password" name="password" type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} minLength={6} required />}
                   {authMode === "register" && <Field label="Confirm password" name="confirmPassword" type="password" autoComplete="new-password" minLength={6} required />}
                   <button disabled={busy} className={`${primaryButton} mt-1 w-full px-gutter-lg py-3.5`}>
@@ -787,10 +857,11 @@ function ErrorNote({ message }) {
 }
 
 function Field({ label, className = "", ...props }) {
+  const inputClass = "h-11 w-full rounded border border-light-outline-variant bg-light-surface-container-lowest px-3 font-body text-body-md text-light-on-surface outline-none transition-colors duration-state-change focus:border-light-primary";
   return (
     <label className={`block font-label text-label-md text-light-on-surface-variant ${className}`}>
       {label}
-      <input {...props} className="mt-1.5 h-11 w-full rounded border border-light-outline-variant bg-light-surface-container-lowest px-3 font-body text-body-md text-light-on-surface outline-none transition-colors duration-state-change focus:border-light-primary" />
+      {props.type === "password" ? <PasswordInput {...props} className={inputClass} /> : <input {...props} className={`mt-1.5 ${inputClass}`} />}
     </label>
   );
 }

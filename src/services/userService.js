@@ -1,8 +1,23 @@
 import { ADMIN, MERCHANT, USER } from "../constants/roles.js";
 import User from "../models/User.js";
+import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import uploadFile from "../utils/file.js";
 
-const createUser = async (data) => await User.create(data);
+const createUser = async (data) => {
+  if (!data.password || String(data.password).length < 6) {
+    throw {
+      statusCode: 400,
+      message: "Password must be at least 6 characters.",
+    };
+  }
+
+  return await User.create({
+    ...data,
+    email: String(data.email || "").trim().toLowerCase(),
+    password: bcrypt.hashSync(String(data.password)),
+  });
+};
 
 const getUsers = async () => {
   const users = await User.find();
@@ -11,7 +26,7 @@ const getUsers = async () => {
 };
 
 const getUserById = async (id) => {
-  const user = await User.findById(id);
+  const user = mongoose.isValidObjectId(id) ? await User.findById(id) : null;
 
   if (!user) {
     throw {
@@ -26,7 +41,7 @@ const getUserById = async (id) => {
 const updateUser = async (id, data, authUser) => {
   const user = await getUserById(id);
 
-  if (user._id != authUser._id && !authUser.roles.includes(ADMIN)) {
+  if (String(user._id) !== String(authUser._id) && !authUser.roles.includes(ADMIN)) {
     throw {
       statusCode: 403,
       message: "Access denied.",
@@ -40,7 +55,7 @@ const updateUser = async (id, data, authUser) => {
       phone: data.phone,
       address: data.address,
     },
-    { new: true }
+    { new: true, runValidators: true }
   );
 
   return updatedUser;
@@ -59,7 +74,7 @@ const updateUserRoles = async (id, data, authUser) => {
     {
       roles: data.roles,
     },
-    { new: true }
+    { new: true, runValidators: true }
   );
 
   return updatedUser;
@@ -72,11 +87,15 @@ const deleteUser = async (id) => {
 const updateProfileImage = async (id, file, authUser) => {
   const user = await getUserById(id);
 
-  if (user._id != authUser._id && !authUser.roles.includes(ADMIN)) {
+  if (String(user._id) !== String(authUser._id) && !authUser.roles.includes(ADMIN)) {
     throw {
       statusCode: 403,
       message: "Access denied.",
     };
+  }
+
+  if (!file) {
+    throw { statusCode: 400, message: "An image file is required." };
   }
 
   const uploadedFiles = await uploadFile([file]);

@@ -1,6 +1,14 @@
 import authService from "../services/authService.js";
 import { createJWT } from "../utils/jwt.js";
 
+const MIN_PASSWORD_LENGTH = 6;
+
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: "lax",
+  maxAge: 24 * 60 * 60 * 1000,
+};
+
 const login = async (req, res) => {
   const input = req.body;
 
@@ -21,7 +29,7 @@ const login = async (req, res) => {
 
     const authToken = createJWT(data);
 
-    res.cookie("authToken", authToken);
+    res.cookie("authToken", authToken, cookieOptions);
 
     res.json({ ...data, authToken });
   } catch (error) {
@@ -45,11 +53,17 @@ const register = async (req, res) => {
       return res.status(400).send("Passwords do not match.");
     }
 
+    if (String(input.password).length < MIN_PASSWORD_LENGTH) {
+      return res
+        .status(400)
+        .send(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+    }
+
     const data = await authService.register(input);
 
     const authToken = createJWT(data);
 
-    res.cookie("authToken", authToken);
+    res.cookie("authToken", authToken, cookieOptions);
 
     res.status(201).json({ ...data, authToken });
   } catch (error) {
@@ -102,6 +116,12 @@ const resetPassword = async (req, res) => {
       return res.status(400).send("Passwords do not match.");
     }
 
+    if (String(input.password).length < MIN_PASSWORD_LENGTH) {
+      return res
+        .status(400)
+        .send(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+    }
+
     const data = await authService.resetPassword(
       query.userId,
       query.token,
@@ -115,7 +135,7 @@ const resetPassword = async (req, res) => {
 };
 
 const logout = async (req, res) => {
-  res.clearCookie("authToken");
+  res.clearCookie("authToken", { httpOnly: true, sameSite: "lax" });
 
   res.json({ message: "Logout successful" });
 };

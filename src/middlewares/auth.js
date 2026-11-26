@@ -12,7 +12,14 @@ const auth = async (req, res, next) => {
 
     if (!cookie) return res.status(401).send("User not authenticated.");
 
-    authToken = cookie.split("=")[1];
+    const match = cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("authToken="));
+
+    if (!match) return res.status(401).send("User not authenticated.");
+
+    authToken = decodeURIComponent(match.slice("authToken=".length));
   }
 
   try {

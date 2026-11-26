@@ -27,9 +27,14 @@ export const metadata = {
     "Thoughtful finds for home, tech and everyday life. Shop the Common Ground edit.",
 };
 
+const themeScript = `try{var t=localStorage.getItem("cg-theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}`;
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${gelasio.variable} ${lato.variable} ${splineMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${gelasio.variable} ${lato.variable} ${splineMono.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>{children}</body>
     </html>
   );

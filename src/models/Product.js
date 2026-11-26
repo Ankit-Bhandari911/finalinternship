@@ -17,12 +17,13 @@ const productSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now(),
+    default: Date.now,
     immutable: true,
   },
   stock: {
     type: Number,
     default: 1,
+    min: [0, "Stock items must not be negative."],
     max: [10000, "Stock items must not exceed 10000."],
   },
   imageUrls: {

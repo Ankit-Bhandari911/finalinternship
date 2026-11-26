@@ -6,12 +6,17 @@ import sendEmail from "../utils/email.js";
 import config from "../config/config.js";
 import { MERCHANT, USER } from "../constants/roles.js";
 
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+
 const login = async (data) => {
-  const user = await User.findOne({ email: data.email });
+  const user = await User.findOne({ email: normalizeEmail(data.email) });
 
   if (!user) throw { statusCode: 404, message: "User not found." };
 
-  const isPasswordMatch = bcrypt.compareSync(data.password, user.password);
+  const isPasswordMatch = bcrypt.compareSync(
+    String(data.password),
+    user.password
+  );
 
   if (!isPasswordMatch)
     throw { statusCode: 400, message: "Incorrect email or password." };
@@ -28,16 +33,17 @@ const login = async (data) => {
 };
 
 const register = async (data) => {
-  const user = await User.findOne({ email: data.email });
+  const email = normalizeEmail(data.email);
+  const user = await User.findOne({ email });
 
   if (user) throw { statusCode: 400, message: "User already exists." };
 
-  const hashedPassword = bcrypt.hashSync(data.password);
+  const hashedPassword = bcrypt.hashSync(String(data.password));
 
   const registeredUser = await User.create({
     name: data.name,
     address: data.address,
-    email: data.email,
+    email,
     password: hashedPassword,
     phone: data.phone,
     roles: data.asMerchant ? [USER, MERCHANT] : [USER],
@@ -53,7 +59,8 @@ const register = async (data) => {
   };
 };
 
-const forgotPassword = async (email) => {
+const forgotPassword = async (rawEmail) => {
+  const email = normalizeEmail(rawEmail);
   const user = await User.findOne({ email });
 
   if (!user) throw { statusCode: 404, message: "User not found." };
